@@ -57,7 +57,9 @@ exports.createProduct = async (req, res) => {
 exports.getAllProducts = async (req, res) => {
     try {
         const { search, category, page = 1, limit = 10 } = req.query;
-        const offset = (page - 1) * limit;
+        const pageNum = parseInt(page, 10) || 1;
+        const limitNum = parseInt(limit, 10) || 10;
+        const offset = (pageNum - 1) * limitNum;
 
         let query = supabase
             .from('products')
@@ -72,7 +74,7 @@ exports.getAllProducts = async (req, res) => {
         }
 
         const { data, error, count } = await query
-            .range(offset, offset + limit - 1)
+            .range(offset, offset + limitNum - 1)
             .order('created_at', { ascending: false });
 
         if (error) throw error;

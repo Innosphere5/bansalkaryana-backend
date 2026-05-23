@@ -3,6 +3,7 @@ const supabase = require('../supabase/supabaseClient');
 // Get All Categories
 exports.getAllCategories = async (req, res) => {
     try {
+
         const { data, error } = await supabase
             .from('categories')
             .select('*')

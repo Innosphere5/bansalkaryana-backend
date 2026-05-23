@@ -142,3 +142,122 @@ exports.updateOrderStatus = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+/**
+ * Delete a single order by ID
+ * Restores stock for items in the order
+ */
+exports.deleteOrder = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Fetch the order before deletion
+        const { data: orderData, error: orderErr } = await supabase
+            .from('orders')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (orderErr) throw orderErr;
+        if (!orderData) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
+        // Restore stock for all items in the order
+        const items = orderData.items || [];
+        for (const item of items) {
+            const { data: prodData, error: prodErr } = await supabase
+                .from('products')
+                .select('stock_quantity')
+                .eq('id', item.id)
+                .single();
+
+            if (!prodErr && prodData) {
+                const currentStock = prodData.stock_quantity || 0;
+                const newStock = currentStock + item.quantity;
+
+                await supabase
+                    .from('products')
+                    .update({ stock_quantity: newStock })
+                    .eq('id', item.id);
+            }
+        }
+
+        // Delete the order
+        const { data, error } = await supabase
+            .from('orders')
+            .delete()
+            .eq('id', id)
+            .select();
+
+        if (error) throw error;
+
+        res.status(200).json({ message: 'Order deleted successfully', order: orderData });
+    } catch (error) {
+        console.error('Error deleting order:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+/**
+ * Delete multiple orders by status (for admin clear-all feature)
+ * Only allows deletion of 'accepted' or 'rejected' orders
+ */
+exports.deleteOrdersByStatus = async (req, res) => {
+    try {
+        const { status } = req.body;
+
+        // Only allow deletion of specific statuses for safety
+        if (!['accepted', 'rejected', 'delivered'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid status for bulk deletion' });
+        }
+
+        // Fetch all orders with the specified status
+        const { data: ordersToDelete, error: fetchErr } = await supabase
+            .from('orders')
+            .select('*')
+            .eq('status', status);
+
+        if (fetchErr) throw fetchErr;
+
+        // Restore stock for all items in all orders
+        for (const order of ordersToDelete) {
+            const items = order.items || [];
+            for (const item of items) {
+                const { data: prodData, error: prodErr } = await supabase
+                    .from('products')
+                    .select('stock_quantity')
+                    .eq('id', item.id)
+                    .single();
+
+                if (!prodErr && prodData) {
+                    const currentStock = prodData.stock_quantity || 0;
+                    const newStock = currentStock + item.quantity;
+
+                    await supabase
+                        .from('products')
+                        .update({ stock_quantity: newStock })
+                        .eq('id', item.id);
+                }
+            }
+        }
+
+        // Delete all orders with the specified status
+        const { data, error } = await supabase
+            .from('orders')
+            .delete()
+            .eq('status', status)
+            .select();
+
+        if (error) throw error;
+
+        res.status(200).json({
+            message: `${ordersToDelete.length} order(s) deleted successfully`,
+            deletedCount: ordersToDelete.length,
+            orders: ordersToDelete
+        });
+    } catch (error) {
+        console.error('Error deleting orders by status:', error);
+        res.status(500).json({ error: error.message });
+    }
+};

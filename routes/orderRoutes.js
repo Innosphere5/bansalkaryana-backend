@@ -9,8 +9,11 @@ router.post('/delete/by-status', orderController.deleteOrdersByStatus);
 // GET routes
 router.get('/', orderController.getOrders);
 
-// PATCH/DELETE routes with parameters
+// PATCH routes with parameters
 router.patch('/:id/status', orderController.updateOrderStatus);
+
+// DELETE routes
 router.delete('/:id', orderController.deleteOrder);
 
 module.exports = router;
+

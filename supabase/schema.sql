@@ -71,4 +71,84 @@ BEFORE UPDATE ON orders
 FOR EACH ROW
 EXECUTE PROCEDURE update_updated_at_column();
 
+-- ============================================
+-- RLS Policies for Orders Table
+-- ============================================
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 
+-- Allow anyone to read orders
+CREATE POLICY "Allow public read on orders"
+ON orders FOR SELECT
+TO anon, authenticated
+USING (true);
+
+-- Allow anyone to insert orders
+CREATE POLICY "Allow public insert on orders"
+ON orders FOR INSERT
+TO anon, authenticated
+WITH CHECK (true);
+
+-- Allow anyone to update orders
+CREATE POLICY "Allow public update on orders"
+ON orders FOR UPDATE
+TO anon, authenticated
+USING (true)
+WITH CHECK (true);
+
+-- Allow anyone to delete orders
+CREATE POLICY "Allow public delete on orders"
+ON orders FOR DELETE
+TO anon, authenticated
+USING (true);
+
+-- ============================================
+-- RLS Policies for Products Table
+-- ============================================
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public read on products"
+ON products FOR SELECT
+TO anon, authenticated
+USING (true);
+
+CREATE POLICY "Allow public insert on products"
+ON products FOR INSERT
+TO anon, authenticated
+WITH CHECK (true);
+
+CREATE POLICY "Allow public update on products"
+ON products FOR UPDATE
+TO anon, authenticated
+USING (true)
+WITH CHECK (true);
+
+CREATE POLICY "Allow public delete on products"
+ON products FOR DELETE
+TO anon, authenticated
+USING (true);
+
+-- ============================================
+-- RLS Policies for Categories Table
+-- ============================================
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public read on categories"
+ON categories FOR SELECT
+TO anon, authenticated
+USING (true);
+
+CREATE POLICY "Allow public insert on categories"
+ON categories FOR INSERT
+TO anon, authenticated
+WITH CHECK (true);
+
+CREATE POLICY "Allow public update on categories"
+ON categories FOR UPDATE
+TO anon, authenticated
+USING (true)
+WITH CHECK (true);
+
+CREATE POLICY "Allow public delete on categories"
+ON categories FOR DELETE
+TO anon, authenticated
+USING (true);

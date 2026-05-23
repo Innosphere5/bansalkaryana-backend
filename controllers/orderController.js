@@ -151,35 +151,38 @@ exports.deleteOrder = async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Fetch the order before deletion
+        // Fetch the order before deletion — use maybeSingle() to avoid PGRST116 on missing rows
         const { data: orderData, error: orderErr } = await supabase
             .from('orders')
             .select('*')
             .eq('id', id)
-            .single();
+            .maybeSingle();
 
         if (orderErr) throw orderErr;
         if (!orderData) {
-            return res.status(404).json({ error: 'Order not found' });
+            // Order already deleted (race condition with polling) — treat as success
+            return res.status(200).json({ message: 'Order already deleted', order: null });
         }
 
-        // Restore stock for all items in the order
-        const items = orderData.items || [];
-        for (const item of items) {
-            const { data: prodData, error: prodErr } = await supabase
-                .from('products')
-                .select('stock_quantity')
-                .eq('id', item.id)
-                .single();
-
-            if (!prodErr && prodData) {
-                const currentStock = prodData.stock_quantity || 0;
-                const newStock = currentStock + item.quantity;
-
-                await supabase
+        // Only restore stock if order was NOT delivered (delivered = stock already consumed)
+        if (orderData.status !== 'delivered') {
+            const items = orderData.items || [];
+            for (const item of items) {
+                const { data: prodData, error: prodErr } = await supabase
                     .from('products')
-                    .update({ stock_quantity: newStock })
-                    .eq('id', item.id);
+                    .select('stock_quantity')
+                    .eq('id', item.id)
+                    .maybeSingle();
+
+                if (!prodErr && prodData) {
+                    const currentStock = prodData.stock_quantity || 0;
+                    const newStock = currentStock + item.quantity;
+
+                    await supabase
+                        .from('products')
+                        .update({ stock_quantity: newStock })
+                        .eq('id', item.id);
+                }
             }
         }
 
